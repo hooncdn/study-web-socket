@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <h1 th:text="${room.name}"></h1>
+    <div id="msgArea" class="col"></div>
+    <div style="display: flex">
+        <input type="text" id="msg" class="form-control">
+        <div>
+            <button type="button" id="button-send">send</button>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.1.js" integrity="sha256-3zlB5s2uwoUzrXK3BT7AX3FyvojsraNFxCc2vC/7pNI=" crossorigin="anonymous"></script>
+    <script src="/webjars/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="/webjars/stomp-websocket/2.3.4/stomp.min.js"></script>
+    <script th:inline="javascript">
+        $(document).ready(function () {
+            const roomId = [[${room.id}]]
+
+            let sockJs = new SockJS("/stomp/chat");
+            let stomp = Stomp.over(sockJs);
+
+            stomp.connect({}, function () {
+                stomp.subscribe("/sub/chat/room/" + roomId, function (chat) {
+                    const content = JSON.parse(chat.body);
+
+                    $("#msgArea").append(content);
+                });
+            });
+
+            const randomUsername = [[${randomUsername}]];
+
+            console.log(randomUsername);
+
+            setTimeout(function () {
+                stomp.send("/pub/chat/message", {}, JSON.stringify({
+                    messageType: 'ENTER', roomId: [[${room.id}]],
+                    sender: randomUsername
+                }));
+            }, 10 * 100);
+
+
+            console.log(randomUsername);
+
+            $("#button-send").on("click", function (e) {
+                let msg = document.getElementById("msg");
+                console.log(randomUsername + ":" + msg.value);
+
+                stomp.send("/pub/chat/message", {}, JSON.stringify({
+                    messageType: 'TALK',
+                    roomId: roomId,
+                    message: msg.value,
+                    sender: randomUsername
+                }));
+                msg.value = "";
+            });
+        });
+    </script>
+</body>
+</html>
